@@ -1,0 +1,39 @@
+{
+  "name": "@codevelocitylabs/prototype-factory",
+  "version": "0.1.0",
+  "description": "Code Velocity Labs Prototype Factory — speed-to-demo pack. Sibling to the production factory, deliberately stripped of hardening / gates / audit. Killer feature: /elevate-to-brief turns a working demo into a brief the production factory accepts on first attempt.",
+  "bin": {
+    "prototype-factory": "bin/cli.js"
+  },
+  "files": [
+    "bin/cli.js",
+    ".claude/agents/**",
+    ".claude/commands/**",
+    ".claude/rules/**",
+    ".claude/skills/**",
+    ".claude/hooks/**",
+    ".claude/metrics/SCHEMA.md",
+    ".claude/metrics/README.md",
+    ".claude/plans/README.md",
+    ".claude/settings.json",
+    "templates/**",
+    "README.md",
+    "install.md",
+    "docs/**"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codevelocitylabs/prototype-factory.git"
+  },
+  "license": "UNLICENSED",
+  "private": false,
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "test": "bash tests/run-all.sh"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "hackathon-demo-cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/main.js",
+    "build": "echo 'cli stack: no build step needed'",
+    "start": "node src/main.js"
+  }
+}
