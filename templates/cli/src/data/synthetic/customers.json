@@ -1,0 +1,9 @@
+[
+  { "id": "acme-corp", "name": "Acme Corp", "tier": "enterprise", "owner": "Sarah Chen", "healthScore": 78, "renewalDate": "2027-03-15" },
+  { "id": "beacon-health", "name": "Beacon Health", "tier": "enterprise", "owner": "Marcus Patel", "healthScore": 82, "renewalDate": "2027-05-20" },
+  { "id": "cortina-logistics", "name": "Cortina Logistics", "tier": "enterprise", "owner": "Priya Ramaswamy", "healthScore": 41, "renewalDate": "2026-11-30" },
+  { "id": "drift-analytics", "name": "Drift Analytics", "tier": "growth", "owner": "Sarah Chen", "healthScore": 91, "renewalDate": "2027-08-01" },
+  { "id": "ember-fintech", "name": "Ember Fintech", "tier": "growth", "owner": "Marcus Patel", "healthScore": 67, "renewalDate": "2027-02-10" },
+  { "id": "frostline-media", "name": "Frostline Media", "tier": "starter", "owner": "Priya Ramaswamy", "healthScore": 88, "renewalDate": "2026-09-15" },
+  { "id": "glade-foods", "name": "Glade Foods", "tier": "starter", "owner": "Sarah Chen", "healthScore": 73, "renewalDate": "2027-04-05" }
+]

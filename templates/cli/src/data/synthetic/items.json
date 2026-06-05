@@ -1,0 +1,20 @@
+[
+  {
+    "id": "item-001",
+    "title": "Sample item — replace this with your demo's content",
+    "body": "Hackathon teams: replace this file (and the customers.json sibling) with real or mocked data for your demo. The shape is flexible — sprint customisation will adapt src/lib/knowledge.js to match whatever fields you need.",
+    "tags": ["placeholder", "demo"]
+  },
+  {
+    "id": "item-002",
+    "title": "Second sample item",
+    "body": "Three items is enough to exercise list-rendering, lookup-by-id, and detail printing. Hackathon teams typically swap in 5–10 items with their actual demo content. If your shape differs (more fields, fewer fields, nested structure), edit both items.json and src/lib/knowledge.js to match.",
+    "tags": ["placeholder", "demo"]
+  },
+  {
+    "id": "item-003",
+    "title": "Third sample item",
+    "body": "The shape here (id / title / body / tags[]) is generic on purpose — maps cleanly to call summaries, meeting notes, project briefs, decision logs, or anything else hackathon teams typically want to render. Customise freely.",
+    "tags": ["placeholder", "demo"]
+  }
+]
