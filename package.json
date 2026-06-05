@@ -25,7 +25,7 @@
     "type": "git",
     "url": "https://github.com/codevelocitylabs/prototype-factory.git"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": false,
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
