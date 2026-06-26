@@ -42,7 +42,7 @@ Then inside Claude Code:
 
 ```
 /spark                 # ~5-minute interview that captures the idea
-/sprint                # straight-line build against the CVL DNA scaffolds
+/sprint                # straight-line build; web UI designed per-demo
 /elevate-to-brief      # (optional) bridge to the production factory
 ```
 
@@ -52,13 +52,13 @@ Then inside Claude Code:
 
 ### `/spark` — idea elicitation
 
-A fast Dialogic interview that captures five fields (Outcome, Acceptance criteria, Runtime stack, Rubric, Notes) and writes a prototype-factory brief to `.claude/briefs/`. Deliberately faster and fewer-fields than the production factory's `/shape-brief`. Hackathon mode trusts the developer's judgement on the idea itself; no stress-testing.
+A fast Dialogic interview that captures six fields (Outcome, Acceptance criteria, Runtime stack, Visual direction, Rubric, Notes) and writes a prototype-factory brief to `.claude/briefs/`. Deliberately faster and fewer-fields than the production factory's `/shape-brief`. Hackathon mode trusts the developer's judgement on the idea itself; no stress-testing.
 
 Optional `--rubric <path>` pre-loads a hackathon judging rubric (or business-stakeholder priority list) — rubric-aware behaviour lights up in `/sprint`'s preview and hand-off via the `rubric-bias-logic` sub-procedure.
 
 ### `/sprint` — straight-line build
 
-Reads the spark brief, runs a one-message Plan-Mode-lite preview, copies `templates/<stack>/` wholesale, customises to satisfy the acceptance criteria, boots the dev server, exercises the criteria, hands off. **No slicing, no gates, no hardening swarm** — sprint is the deliberate anti-pattern relative to the production factory's `/build`.
+Reads the spark brief, runs a one-message Plan-Mode-lite preview, copies `templates/<stack>/` wholesale, customises to satisfy the acceptance criteria — web UIs are designed subject-distinctive via `/frontend-design`, with a discreet Code Velocity CTA — boots the dev server, exercises the criteria, hands off. **No slicing, no gates, no hardening swarm** — sprint is the deliberate anti-pattern relative to the production factory's `/build`.
 
 Novel discipline: a 3-attempt failure threshold on the customisation loop. After three failed re-tries on the same acceptance criterion, sprint stops and surfaces — agentic-safety Rule 7 (honest when caught) applied to build-time.
 
@@ -98,9 +98,9 @@ See `docs/capability-model.md` for the three-zone (Intent / Orchestration / Vali
 Stamped workspaces (via `init` or force-stamp) get:
 
 - **Three chain skills:** `/spark`, `/sprint`, `/elevate-to-brief` plus the `rubric-bias-logic` sub-procedure (consumed by `/sprint` when a rubric is present).
-- **CVL DNA primitives:** design system (placeholder package name in v0.1 — see swap points below), generic team-provided knowledge data scaffolds, shared data shapes scaffolds.
+- **Local scaffolds:** generic team-provided knowledge data scaffolds and shared data shapes scaffolds. Web visuals are generated per-demo by `/frontend-design` — no bundled design system.
 - **Local-only runtime defaults:** SQLite / flat JSON persistence helpers, no-auth hardcoded user pattern, generic synthetic data fixtures (replace with your demo's real or mocked content per hackathon).
-- **Two stack templates:** `templates/web/` (single-page HTML + tiny Node server, CVL DNA stylesheet) and `templates/cli/` (Node CLI). Plus `templates/other/` as a documented placeholder for non-default stacks.
+- **Two stack templates:** `templates/web/` (single-page HTML + tiny Node server, unstyled skeleton — visuals designed per-demo) and `templates/cli/` (Node CLI). Plus `templates/other/` as a documented placeholder for non-default stacks.
 - **`agentic-safety.md` + `persona.md`** auto-loaded rules.
 - **Explanatory output style** by default.
 
@@ -108,115 +108,36 @@ Stamped workspaces (via `init` or force-stamp) get:
 
 ## v0.1 → v0.2 swap points (grep `TODO` to find them all)
 
-The pack ships honest placeholders in two places. v0.2 swaps each for real values:
+The pack ships one honest placeholder. v0.2 swaps it for real values:
 
-1. **CVL design system stylesheet** — `templates/web/public/styles.css` is an inline-CSS placeholder shaped like Code Velocity Labs visual language. Swap for the real DS stylesheet (or `<link>` it from a published package) when promoting a demo. `npm install` is not required — `templates/web/` ships zero dependencies and boots with `node server.js`.
-2. **Shared data shapes** — `templates/<stack>/src/data/synthetic/customers.json` uses a placeholder shape. Align with the real shared-data-shapes package when known.
+1. **Shared data shapes** — `templates/<stack>/src/data/synthetic/customers.json` uses a placeholder shape. Align with the real shared-data-shapes package when known.
+
+(Web visuals are no longer a swap point — `templates/web/` ships an unstyled skeleton with zero dependencies, boots with `node server.js`, and `/sprint` designs the UI per-demo via `/frontend-design`.)
 
 Plus one v0.2 verification gap:
 
-3. **End-to-end "passes `/plan-brief` on first attempt"** — `/elevate-to-brief`'s structural verification (schema-enforcement walk on the elevated brief) is rigorous, but the runtime smoke (actually running the production factory's `/plan-brief` against an elevated brief) is deferred to the first real prototype → elevation → production-factory chain run.
+2. **End-to-end "passes `/plan-brief` on first attempt"** — `/elevate-to-brief`'s structural verification (schema-enforcement walk on the elevated brief) is rigorous, but the runtime smoke (actually running the production factory's `/plan-brief` against an elevated brief) is deferred to the first real prototype → elevation → production-factory chain run.
 
 ---
 
 ## Status — v0.1
 
-Six slices shipped. All in working state. Two v0.2 swap points + one verification gap, all explicitly marked and documented.
+Six slices shipped. All in working state. One v0.2 swap point + one verification gap, all explicitly marked and documented.
 
 | Slice | Status |
 |---|---|
 | 1 — pack skeleton + CLI | ✅ |
 | 2 — `/spark` skill | ✅ |
 | 3 — `/sprint` skill | ✅ |
-| 4 — CVL DNA + local defaults (templates/web + templates/cli + settings) | ✅ (web requires v0.2 DS swap to fully run; CLI runnable now) |
+| 4 — Templates + local defaults (templates/web + templates/cli + settings) | ✅ (web boots unstyled, styled per-demo by `/frontend-design`; CLI runnable) |
 | 5 — `rubric-bias-logic` (visibility-only v0.1) | ✅ |
 | 6 — `/elevate-to-brief` killer feature | ✅ |
 | 7 — docs + handoff (this README + install + capability model + walkthrough + CLAUDE.md) | ✅ |
 
 ---
 
-## Branding Contract (mandatory for every prototype)
+## Leadgen (lightweight)
 
-Every prototype this factory generates is a Code Velocity Labs leadgen asset. Prospects, their teams, and anyone they share the prototype with should see Code Velocity Labs attached to working software. **This is non-negotiable and applies to all output regardless of stack or template.**
+Every **web** demo carries a discreet link + a single call-to-action back to Code Velocity Labs (`https://codevelocity.io`), woven into the demo's own subject-distinctive design by `/sprint`. That is the whole requirement — no mandatory logo, footer-on-every-view, favicon, Open Graph image, or `<title>` suffix. `cli` / `other` stacks carry no leadgen requirement.
 
-### What must appear in every prototype
-
-| Surface | Requirement |
-|---------|-------------|
-| **Header / top nav** | Code Velocity logo (SVG below), linking to `https://codevelocity.io` (target `_blank`, `rel="noopener"`). |
-| **Footer** | `Built by Code Velocity Labs` credit with link to `https://codevelocity.io`. Persistent across every page / view. |
-| **Favicon** | Code Velocity mark (the `C` + chevron from the logo). |
-| **Open Graph image** | Branded OG card so any shared link previews carry the Code Velocity wordmark. |
-| **Page `<title>`** | Suffix every title with `· Code Velocity Labs` (or `| Code Velocity Labs` for non-Hugo stacks). |
-| **README of the generated prototype** | First line: `Prototype built by [Code Velocity Labs](https://codevelocity.io) using the Prototype Factory.` |
-
-### Brand tokens
-
-Use these as CSS custom properties in every web prototype:
-
-```css
-:root {
-  --bg-body:        #0B0C10;
-  --bg-card:        #13151A;
-  --border-subtle:  #2A2F3A;
-  --text-primary:   #F5F5F7;
-  --text-secondary: #D1D1D1;
-  --accent-glow:    #0055FF;
-  --accent-hover:   #3377FF;
-
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-}
-```
-
-Load fonts from:
-
-```html
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-```
-
-### Logo (inline SVG)
-
-Drop this directly into the prototype header. Wrap it in an anchor pointing to `https://codevelocity.io`.
-
-```html
-<a href="https://codevelocity.io" target="_blank" rel="noopener" aria-label="Built by Code Velocity Labs">
-  <svg width="200" height="42" viewBox="0 0 240 50" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <filter id="cvl-glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>
-    </defs>
-    <g transform="translate(5, 5)">
-      <path d="M22 8 C 8 8, 2 16, 2 22 C 2 32, 10 38, 20 38 L 26 38 L 26 30 L 20 30 C 15 30, 10 26, 10 22 C 10 17, 15 14, 20 14 L 26 14 L 26 6 L 22 6 Z" fill="#FFFFFF"/>
-      <path d="M30 6 L 42 22 L 30 38 L 38 38 L 54 22 L 38 6 L 30 6 Z" fill="#4060FF" filter="url(#cvl-glow)"/>
-    </g>
-    <text x="65" y="33" font-family="Inter, sans-serif" font-weight="500" letter-spacing="-0.5" fill="#FFFFFF" font-size="22">Code</text>
-    <text x="118" y="33" font-family="Inter, sans-serif" font-weight="700" letter-spacing="-0.5" fill="#FFFFFF" font-size="22">Velocity</text>
-  </svg>
-</a>
-```
-
-For light-background prototypes, swap the `#FFFFFF` fills to `#0B0C10`.
-
-### Footer credit (HTML)
-
-```html
-<footer style="padding: 1.5rem; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #D1D1D1;">
-  Built by <a href="https://codevelocity.io" target="_blank" rel="noopener" style="color: #3377FF; text-decoration: none;">Code Velocity Labs</a>
-  using the <a href="https://github.com/codevelocitylabs/prototype-factory" target="_blank" rel="noopener" style="color: #3377FF; text-decoration: none;">Prototype Factory</a>.
-</footer>
-```
-
-### Non-web prototypes (CLI, scripts, services)
-
-- **CLI tools:** print a one-line banner on first run: `Code Velocity Labs · prototype-factory · https://codevelocity.io`
-- **APIs / services:** include the credit in the `/` or `/health` response payload and in the OpenAPI `info.description`.
-- **Notebooks:** add a markdown cell at the top with the logo and credit.
-
-### Enforcement
-
-The Spark phase must inject branding into every boilerplate template by default. The Elevate phase must verify branding is present before producing the Factory Brief; if any required surface is missing, fail loud rather than silently strip the contract.
+The thesis: a demo that looks like the *prospect's* own product impresses more than one wearing a house style, and the CTA still routes the viewer back to Code Velocity.

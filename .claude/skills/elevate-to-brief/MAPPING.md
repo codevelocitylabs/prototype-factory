@@ -61,7 +61,7 @@ Refuse if the developer can't name at least one in-scope and one out-of-scope it
 
 Spark's `## Runtime stack` value translates additionally:
 
-- `web` → suggest "new MFE repo to be created (single-page HTML + tiny Node server, CVL DNA)" as a starting answer; developer can override with an existing MFE repo name if extending rather than creating, or upgrade to a framework if production scope warrants it.
+- `web` → suggest "new MFE repo to be created (single-page HTML + tiny Node server)" as a starting answer; developer can override with an existing MFE repo name if extending rather than creating, or upgrade to a framework if production scope warrants it.
 - `cli` → suggest "new CLI tool to be created (Node)" OR "existing CLI tool to be extended"; developer picks.
 - `other` → no auto-suggestion; the developer's `other: <description>` from the Spark Brief seeds the question but the affected-repo answer is the developer's call.
 
@@ -130,10 +130,10 @@ The literal phrase "none additional beyond rules" is acceptable per `VENDORED-SC
 For a typical Spark-built `web` demo, the touchpoints are (from slice 4's templates):
 
 - Customer / business data
-- CVL design system
+- Design system (production repo)
 - Local persistence (SQLite / file)
 
-For `cli` demos: same minus CVL design system.
+For `cli` demos: same minus design system.
 
 For `other` demos: no auto-suggestion; the developer enumerates their own touchpoints.
 

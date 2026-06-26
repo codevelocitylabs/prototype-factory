@@ -81,7 +81,7 @@ cat .claude/.factory-version          # should match the version you installed
 ls .claude/rules/                     # should include agentic-safety.md, persona.md
 jq '.outputStyle' .claude/settings.json     # should output "Explanatory"
 ls .claude/skills/                    # should include spark, sprint, elevate-to-brief
-ls templates/                         # should include web, cli, other
+ls templates/                         # should include web, cli
 ```
 
 If any of these fail, see Troubleshooting below.
@@ -92,7 +92,7 @@ If any of these fail, see Troubleshooting below.
 
 **`node bin/cli.js` says "Node 22+ required":** install Node 22+ via nvm / asdf / volta / your package manager. The version cap is enforced because the pack's CLI uses Node 22 stable features.
 
-**`npm install` in `templates/web/` fails on `@codevelocitylabs/ds`:** that's the documented v0.1 placeholder. Web template's full smoke is deferred until the v0.2 DS swap. Use `templates/cli/` for v0.1 demos that don't need UI — CLI is fully runnable.
+**`templates/web/` and `npm install`:** the web template ships zero dependencies and needs no `npm install` — it boots with `node server.js`. Visuals are generated per-demo by `/frontend-design`, so there is no design-system package to resolve.
 
 **`gh repo create` fails with permission error:** verify `gh auth status` shows authenticated user with `repo` scope in `codevelocitylabs`. The deferred-push step assumes this; the `init` step itself does not.
 
@@ -125,5 +125,5 @@ A: Locally, at `/sprint`'s hand-off ("Demo running at localhost:5173 — iterate
 ## What this pack does NOT install
 
 - **The production factory.** A separate, private pack; install it separately if you want the full 7-phase chain.
-- **Product-specific dependencies.** CVL DNA primitives (design system, shared data shapes) are wired but require valid npm credentials (and the v0.2 swap) to actually resolve at install time.
+- **Product-specific dependencies.** Shared-data-shapes scaffolds are wired but may require valid npm credentials (and the v0.2 swap) to resolve at install time. Web visuals need no package — `/frontend-design` generates them per-demo.
 - **Cloud auth.** Local-only by design.
