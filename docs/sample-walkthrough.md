@@ -44,10 +44,16 @@ Developer> They'd click through all three calls, see the summaries, ask if at le
 Developer> Yes
 ```
 
-> Spark: "Default stack is web (single-page HTML + tiny Node server, CVL DNA stylesheet). Want that, or override to `cli` / `other`?"
+> Spark: "Default stack is web (single-page HTML + tiny Node server; visuals designed per-demo). Want that, or override to `cli` / `other`?"
 
 ```
 Developer> web
+```
+
+> Spark: "Any visual direction — whose look-and-feel should this echo? The audience's world, a brand, a reference site? (skip if none)"
+
+```
+Developer> Clean, modern SaaS dashboard feel — think Linear or Notion. The head of CS lives in tools like that.
 ```
 
 > Spark: "Hackathon judging rubric or business-stakeholder priority list to bias against? Paste it, give me a file path, or say 'none'."
@@ -55,7 +61,7 @@ Developer> web
 ```
 Developer> ## Judging criteria
            1. Demo quality (40%) — does it actually work end-to-end?
-           2. CVL DNA (30%) — does it look like a Code Velocity Labs prototype?
+           2. Visual fit (30%) — does it look like it belongs in the head of CS's world?
            3. Business value (30%) — Monday-relevance test
 ```
 
@@ -68,7 +74,7 @@ Developer> Drift's CTO loved this concept at Q1 strategy day — worth mentionin
 
 > Spark: "Brief written to `.claude/briefs/customer-call-summariser.md`. Run `/sprint` to start building."
 
-The brief file now exists with all five fields populated. **Elapsed: ~3 minutes.**
+The brief file now exists with all six fields populated. **Elapsed: ~3 minutes.**
 
 ---
 
@@ -81,7 +87,7 @@ Developer> /sprint
 > Sprint: "Using brief: `.claude/briefs/customer-call-summariser.md`.
 >
 > Here's the plan:
-> - Stack: web (single-page HTML + tiny Node server, CVL DNA stylesheet)
+> - Stack: web (single-page HTML + tiny Node server; visuals designed per-demo via /frontend-design)
 > - Scaffold source: `templates/web/` — copying wholesale into workspace root
 > - User code lives at `src/demo/` (plus front-end extensions to `public/app.js` and any new routes in `server.js`)
 > - Acceptance criteria → expected behaviour:
@@ -91,10 +97,10 @@ Developer> /sprint
 > - `--no-boot` not active; will run `node server.js` after customisation (no `npm install` needed — zero deps).
 >
 > Rubric coverage:
->   Dimensions: Demo quality, CVL DNA, Business value
+>   Dimensions: Demo quality, Visual fit, Business value
 >   Criterion 1 (3 transcripts bundled) → Demo quality
 >   Criterion 2 (<5s summary) → Demo quality, Business value
->   Criterion 3 (account owner by role) → CVL DNA, Business value
+>   Criterion 3 (account owner by role) → Visual fit, Business value
 >
 > OK to proceed? (y/n)"
 
@@ -103,6 +109,7 @@ Developer> y
 ```
 
 Sprint copies `templates/web/` into the workspace root. Customises:
+- Invokes `/frontend-design` and builds a clean SaaS-dashboard UI (per the brief's `## Visual direction`) in bespoke `public/index.html` + CSS — with a discreet "Built with Code Velocity" link + CTA to codevelocity.io.
 - Authors `src/demo/transcripts.js` — server-side helper that loads three transcripts from synthetic data.
 - Extends `server.js` with `/api/transcripts` and `/api/transcripts/:id/summary` routes (the summary is pre-computed in the synthetic data, no live LLM call this iteration).
 - Extends `public/app.js` — adds a list view, a click handler, and a detail view that renders the 3–5 bullet action items + named account owner.
@@ -121,7 +128,9 @@ No `npm install` needed — `templates/web/` ships zero dependencies. `node serv
 >   - Promote: run /elevate-to-brief to produce a production-factory brief
 >   - Stop: ctrl-c the dev server when you're done
 >
-> Note: demo styling is the `public/styles.css` CVL DNA placeholder. Real CVL visual polish lands at v0.2 when the DS stylesheet is swapped in."
+> (web) Code Velocity CTA: present.
+>
+> Note: the UI was designed per-demo via `/frontend-design` from the brief's `## Visual direction` — bespoke `public/index.html` + CSS, no placeholder stylesheet."
 
 **Elapsed total: ~28 minutes.** Demo runs. The developer screenshares to the head of CS, who clicks through all three calls. The "is this useful?" reaction is positive enough that the demo is worth keeping.
 
@@ -183,7 +192,7 @@ Developer> Use the new event bus for summarisation triggers (legal flagged the o
 > Elevate: "Data reality decisions. For each touchpoint, pick a mode (Real / Real-Stale / Synthetic / Fallback-Active / Degraded — Unknown is not allowed):
 > - Call transcript source (real call ingestion vs synthetic): ?
 > - Customer / business data: ?
-> - CVL design system: ?
+> - Design system (production repo): ?
 > - Summarisation AI endpoint: ?
 > - Local persistence: ?"
 

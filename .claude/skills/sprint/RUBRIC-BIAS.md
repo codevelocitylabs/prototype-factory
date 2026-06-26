@@ -31,7 +31,7 @@ Rubric uses `## ` (level-2) headings for each dimension:
 ## Demo quality
 Does it actually work end-to-end?
 
-## CVL DNA
+## Visual fit
 Does it look like a Code Velocity Labs prototype?
 
 ## Business value
@@ -46,7 +46,7 @@ Rubric uses `- ` bullets or `1. ` numbered list:
 
 ```markdown
 - Demo quality — does it actually work?
-- CVL DNA — does it look like a Code Velocity Labs prototype?
+- Visual fit — does it look like it belongs in the audience's world?
 - Business value — Monday-relevance test
 ```
 
@@ -58,7 +58,7 @@ Rubric uses inline percentages:
 
 ```markdown
 Demo quality (40%) — does it actually work?
-CVL DNA (30%) — does it look like a Code Velocity Labs prototype?
+Visual fit (30%) — does it look like it belongs in the audience's world?
 Business value (30%) — Monday-relevance test
 ```
 
@@ -89,7 +89,7 @@ The output is a mapping:
 ```
 {
   "criterion 1 text": ["Demo quality", "Business value"],
-  "criterion 2 text": ["CVL DNA"],
+  "criterion 2 text": ["Visual fit"],
   "criterion 3 text": []
 }
 ```
@@ -108,10 +108,10 @@ After the existing 4–8 line preview, if the rubric is non-`(none)`, append:
 
 ```
 Rubric coverage:
-  Dimensions extracted: Demo quality, CVL DNA, Business value
+  Dimensions extracted: Demo quality, Visual fit, Business value
   Acceptance criterion 1 ("staff can drag a card …") → Demo quality, Business value
   Acceptance criterion 2 ("summary in <5s") → Demo quality
-  Acceptance criterion 3 ("account owner named by role") → CVL DNA, Business value
+  Acceptance criterion 3 ("account owner named by role") → Visual fit, Business value
 ```
 
 If any criterion maps to zero dimensions, list it with `→ no rubric match` so the developer can decide whether to revise the rubric or the criterion.
@@ -123,7 +123,7 @@ After the per-criterion pass/fail summary, if the rubric is non-`(none)`, append
 ```
 Rubric coverage at hand-off:
   Demo quality: 2/2 criteria addressed (pass)
-  CVL DNA: 1/1 criteria addressed (pass)
+  Visual fit: 1/1 criteria addressed (pass)
   Business value: 2/2 criteria addressed (pass — but one is "partial" per below)
   
   Criteria with no rubric match: 0

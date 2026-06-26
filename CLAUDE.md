@@ -25,7 +25,7 @@ That's it. The production factory's larger rules set (build-methodology, phase-c
 | Rubric bias sub-procedure | `.claude/skills/sprint/RUBRIC-BIAS.md` |
 | Spark Brief Format spec | `.claude/skills/spark/SPARK-BRIEF-FORMAT.md` |
 | Production-schema vendored | `.claude/skills/elevate-to-brief/VENDORED-SCHEMA.md` (+ `SCHEMA-CHECKSUM.json` + `MAPPING.md`) |
-| Stack templates | `templates/{web,cli,other}/` |
+| Stack templates | `templates/{web,cli}/` |
 | Auto-loaded rules | `.claude/rules/{agentic-safety,persona}.md` |
 | Hooks (minimal) | `.claude/hooks/capture-session-{start,end}.sh` |
 | Settings | `.claude/settings.json` (+ `settings.local.json.example`) |

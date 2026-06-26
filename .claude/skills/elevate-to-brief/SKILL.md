@@ -32,7 +32,7 @@ If the developer hasn't run `/sprint` yet, elevation still works — the elevate
 
 ### 1. Brief discovery
 
-Find Spark Briefs in `.claude/briefs/`. Filter for files containing `**Spark format version:** 1` (the v1 metadata marker).
+Find Spark Briefs in `.claude/briefs/`. Filter for files containing a `**Spark format version:**` line (v1 or v2).
 
 - **One brief found:** use it. Print: "Elevating brief: `.claude/briefs/{slug}.md`."
 - **Multiple briefs found:** list them by modified-time descending, ask the developer to pick. **Do not silently pick the most recent.**
@@ -65,9 +65,9 @@ If the SHA mismatches: refuse. Print:
 
 Use the algorithm in `.claude/skills/spark/SPARK-BRIEF-FORMAT.md` § "Reference implementation note":
 
-1. Verify `**Spark format version:** N`. Refuse if `N > 1`.
-2. Extract title (level-1 heading), Outcome, Acceptance criteria, Runtime stack, Rubric, Notes.
-3. Validate each required section is non-empty (`(none)` is the documented empty marker for Rubric / Notes).
+1. Verify `**Spark format version:** N`. Refuse if `N > 2`.
+2. Extract title (level-1 heading), Outcome, Acceptance criteria, Runtime stack, Visual direction, Rubric, Notes. A v1 brief has no `## Visual direction` → treat as `(none)`.
+3. Validate each required section is non-empty (`(none)` is the documented empty marker for Visual direction / Rubric / Notes).
 
 ### 4. Apply direct mappings
 
@@ -76,7 +76,7 @@ Per `./MAPPING.md`, no interaction needed:
 - Title → production title (verbatim)
 - Outcome → production Outcome (verbatim)
 - Acceptance criteria → production Success criteria (rename only)
-- Notes + Rubric (when non-`(none)`) → combined into production Crew refinement notes
+- Notes + Rubric + Visual direction (when non-`(none)`) → combined into production Crew refinement notes
 
 ### 5. Elicit brief id
 
@@ -234,7 +234,7 @@ For `--dry-run`, replace "Handoff package written to ..." with "Handoff package 
 |---------|----------|
 | No Spark Brief found in `.claude/briefs/` | Refuse with "Run `/spark` first." |
 | Named brief slug (`--brief <slug>`) doesn't exist | Refuse with the path that was checked. |
-| Spark Format version > 1 | Refuse with version mismatch. |
+| Spark Format version > 2 | Refuse with version mismatch. |
 | Schema-drift checkpoint fails (vendored SHA mismatch) | Refuse with restore instructions (see Step 2). |
 | Developer can't answer any of the 5 elicited fields (Boundaries / Affected repos / Risk / Constraints / Data reality) after one push-back | Refuse and surface the specific field. Do NOT fabricate. The schema's refusal templates are the canonical phrasing. |
 | Developer declares any data touchpoint mode as `Unknown` | Refuse verbatim with the schema's Step 8 template. |

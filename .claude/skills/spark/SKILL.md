@@ -1,169 +1,71 @@
 ---
 name: spark
-description: Prototype Factory upfront alignment skill. Interview the developer through a fast 5-step elicitation, optionally accept a rubric, and write a Spark Brief Format file to .claude/briefs/. The output is the contract /sprint and /elevate-to-brief consume. Spark is deliberately faster and fewer-fields than the production factory's /shape-brief.
+description: Elicit a demo idea from the developer in a fast interview (incl. optional visual direction), optionally run an uncapped research swarm to pressure-test it, then write a Spark Brief to .claude/briefs/{slug}.md. The brief is the contract /sprint and /elevate-to-brief consume.
 model: opus
 ---
 
-> **Persona modes: Dialogic + Strategic** — see `.claude/rules/persona.md` §§ 'Dialogic' and 'Strategic'. The developer owns every decision; your job is to draw them out fast. One good question beats five generic ones — this is hackathon mode.
+Mode: Dialogic (see `.claude/rules/persona.md`) — the developer owns every decision; draw it out fast. One good question beats five. Capture the idea; do not stress-test it.
 
-# Spark — Prototype Factory Idea Elicitation
+Output: a brief in the six-section Spark Brief Format — `Outcome`, `Acceptance criteria`, `Runtime stack`, `Visual direction`, `Rubric`, `Notes`. Authoritative spec: `SPARK-BRIEF-FORMAT.md`. Never add a seventh field — promotion concerns (boundaries, risk, repos) belong to `/elevate-to-brief`.
 
-> **Speed-to-demo discipline.** The whole prototype factory targets ≤60 minutes spark → sprint → demo. Spark itself should be **under 5 minutes** for a simple idea. If you find yourself adding a sixth field, stop — that belongs in `/elevate-to-brief`, not here.
+## Inputs
 
----
-
-## When this fires
-
-- The developer invokes `/spark` directly. There is no upstream skill that calls it.
-- It is the entry point into the prototype factory's chain: `/spark → /sprint → /elevate-to-brief (optional)`.
-- It is safe to re-run on an existing brief — the procedure refuses to overwrite without explicit confirmation.
-
----
-
-## Prerequisites
-
-The developer has an idea and ~5 minutes. That's it. No prior factory state required.
-
-If the developer has a hackathon rubric or business-stakeholder priority list, they can supply it via `--rubric <path>` to pre-load step 4.
-
----
+| Invocation | Behaviour |
+|---|---|
+| `/spark` | Steps 1–8 (interview + research swarm). |
+| `/spark --rubric <path>` | Load rubric from the file at Step 5. Refuse if missing. |
+| `/spark --no-research` | Skip Step 7. Composes with any flag. |
+| `/spark --quick` | Ask for all six fields in one message; skip per-step reflect-back; implies `--no-research`. Still reflect the idea back in one line before writing. |
 
 ## Procedure
 
-### Step 1: Idea (the load-bearing field)
+### 1. Idea
+Ask: *"Describe the demo you want to build. Who's it for, and what's the moment they react to?"* Reflect back in 1–2 sentences; recheck if it feels off.
 
-Ask **one** open question:
+### 2. Acceptance criteria
+Ask: *"If we shipped exactly this and nothing else, what would your {audience} do with it in front of you?"* Convert the answer into 2–5 **observable** criteria — a third party watching the demo can check each off. (*"drags a card from To-Do to In-Progress and sees it update"* is observable; *"improves the experience"* is not.) If the answer is vague, push back once: *"What's the smallest concrete thing they'd point at and say 'that works'?"* Then accept what's offered.
 
-> "Describe the demo you want to build. Who's it for, and what's the moment they react to?"
+If a rubric was supplied via `--rubric`, load it now and ask once: *"Which rubric criteria should this demo make the strongest case for?"* Record the answer in `## Notes`.
 
-Listen. Reflect back in 1–2 sentences. If the reflection feels off, recheck before moving on. Do not stress-test the idea — that's `/shape-brief`'s job upstream, not spark's. Hackathon mode trusts the developer's judgement on the idea itself.
+### 3. Runtime stack
+Ask: *"Default stack is web (single-page HTML + tiny Node server; visuals designed per-demo). Keep web, or override to `cli` / `other`?"* For `other`, ask one follow-up and record the answer verbatim.
 
-### Step 2: Acceptance
+### 4. Visual direction
+Web stack only (else `(none)`). Ask once, optional: *"Any visual direction — whose look-and-feel should this echo? The audience's world, a brand, a reference site? (skip if none)"* Record verbatim in `## Visual direction`; skipped or no answer → `(none)`.
 
-Ask one Strategic question:
+### 5. Rubric
+With `--rubric <path>`: load the file verbatim into `## Rubric`; refuse if missing. Otherwise ask: *"Judging rubric or stakeholder priority list to capture? Paste it, give a path, or say 'none'."* Capture verbatim; `none` → `(none)`. Do not assess rubric quality.
 
-> "If we shipped exactly this and nothing else, what would your {audience} actually *do* with it in front of you?"
+### 6. Notes
+Ask: *"Anything else to capture — references, prior art, what NOT to build?"* Free-form; *"no"* → `(none)`.
 
-Convert the developer's answer into 2–5 observable criteria. Observable means: a third party watching the demo could check it off. "Improves the experience" is not observable; "the stakeholder can drag a customer card from To-Do into In-Progress and see it update" is observable.
+### 7. Research swarm
+Skip entirely under `--no-research` or `--quick` (behaviour is then identical to interview-only).
 
-If the developer's answer reduces to "feels good" or "shows progress", push back once: "What's the smallest concrete thing they'd point at and say 'that's the bit that works'?" One push-back, then accept what they offer — don't drag.
+Otherwise tell the developer: *"Running independent research — competitors, prior art, what others have tried — to pressure-test the brief. Takes a few minutes; skip next time with `--no-research`."* Then invoke a dynamic workflow, **coverage-driven with no agent cap** (the subject sets the scale):
 
-**Rubric-aware path (when `--rubric <path>` was supplied as a CLI flag):** load the rubric file content *before* this step (not after, as the default step ordering would suggest). If you have a rubric in hand, after eliciting the acceptance criteria, ask **one** optional Strategic-mode question:
+1. **Scope** — one agent decomposes the brief into research dimensions emergently: subject expertise, competitive landscape, prior art, adjacent approaches, feasibility, what-not-to-build.
+2. **Fan out** — one web-research agent (WebSearch/WebFetch) per sub-question; tens of agents for a rich subject, fewer for a narrow one.
+3. **Critic loop** — an agent asks *"what's still uncovered?"* and triggers another round; stop when a round finds nothing new.
+4. **Synthesize** — compress findings to a short digest: landscape, prior art, contradictions with the elicited direction, what-not-to-build.
 
-> "Looking at your rubric — which of those criteria do you want this demo to make the *strongest* case for? Doesn't change what we build; helps me capture the framing in the brief for `/sprint` to highlight later."
+Present the digest to the developer as decisions — especially contradictions (*"a shipped product already does this"*). The developer decides each; never fold a finding in without sign-off. Land accepted findings in **existing** sections: prior art / competitive notes / what-not-to-build → `## Notes`; sharpened wording → `## Outcome` or `## Acceptance criteria`.
 
-Capture the answer in the brief's `## Notes` section (not a new field — additive within the existing 5-section schema). If the developer answers "doesn't matter" or skips, accept and move on. Hackathon mode trusts the developer.
+### 8. Write
+Derive a kebab-case `{slug}` (3–5 words) from the idea title; ask if ambiguous. Write the brief to `.claude/briefs/{slug}.md`. If it exists, refuse to overwrite — offer overwrite (explicit `yes`), a new slug, or amend in place. Then: *"Brief written to `.claude/briefs/{slug}.md`. Run `/sprint` to build."* If a rubric was captured, add: *"Rubric captured — `/sprint` will respect it."*
 
-**Step-ordering asymmetry to be aware of:** the rubric-aware question above is available *only* when the rubric is provided via the `--rubric <path>` CLI flag (loaded early). When the rubric is captured interactively at Step 4, the bias-during-acceptance opportunity has already passed — Step 4 captures the rubric verbatim and Step 5 (Notes) optionally surfaces the same follow-up question if the developer is still engaged. This asymmetry is intentional: the CLI flag indicates the developer arrived with a rubric in hand, while interactive capture means the rubric is being discovered mid-flow.
-
-### Step 3: Runtime stack
-
-Default to `web`. Confirm with a single line:
-
-> "Default stack is web (single-page HTML + tiny Node server, CVL DNA stylesheet). Want that, or override to `cli` / `other`?"
-
-Override is rare — the brief pins web as the default for stakeholder-facing demos. If they pick `other`, ask one follow-up to capture what they actually want (desktop? mobile? something else?). Record the answer verbatim.
-
-### Step 4: Rubric (optional)
-
-If `--rubric <path>` was supplied: skip the interview, load the file content into the brief's Rubric section verbatim. If the file does not exist on disk, **refuse and surface explicitly** — do not silently proceed without the rubric (Rule 4, explicit failure reporting).
-
-If no `--rubric` arg: ask once:
-
-> "Hackathon judging rubric or business-stakeholder priority list to bias against? Paste it, give me a file path, or say 'none'."
-
-Accept whatever the developer gives. Do not stress-test the rubric's quality. If they say "none", set the Rubric section to `(none)`.
-
-### Step 5: Notes (optional scratchpad)
-
-> "Anything else worth capturing — references, prior art, what NOT to build?"
-
-Free-form. If they say "no", set the Notes section to `(none)`. Move on.
-
-### Step 6: Write the brief
-
-Derive a kebab-case `{slug}` from the idea title (3–5 words; ask the developer if the idea is multi-paragraph and the title is ambiguous).
-
-Write the brief to `.claude/briefs/{slug}.md` using the Spark Brief Format (see sibling file `SPARK-BRIEF-FORMAT.md`).
-
-If `.claude/briefs/{slug}.md` already exists: refuse to overwrite. Ask the developer if they want to overwrite (require explicit `yes`), pick a different slug, or amend the existing brief.
-
-Tell the developer:
-
-> "Brief written to `.claude/briefs/{slug}.md`. Run `/sprint` to start building."
-
----
-
-## CLI variants
-
-| Invocation | Behaviour |
-|------------|-----------|
-| `/spark` | Full stepwise interview (Steps 1–6). |
-| `/spark --rubric <path>` | Pre-loads rubric from file; skips Step 4's interview. Refuses if the file does not exist. |
-| `/spark --quick` | One mega-prompt mode for experienced developers. Asks for all five fields in a single message: "Give me idea / acceptance / stack / rubric / notes in one go." Skip the per-step reflect-back loops. Still writes the same Spark Brief Format. |
-| `/spark --quick --rubric <path>` | Quick mode + pre-loaded rubric. Asks for idea / acceptance / stack / notes only. |
-
-`--quick` is a **first-class case**, not an afterthought. Experienced developers who already know what they want should not be forced through stepwise. Test it the same way you'd test stepwise.
-
----
-
-## Refusal behaviours
-
-Spark refuses and surfaces explicitly in these cases. Refusals are not failures — they're the skill respecting the developer's autonomy and the contract with downstream skills.
+## Refusals (refuse and surface; never improvise)
 
 | Trigger | Response |
-|---------|----------|
-| `--rubric <path>` points to a file that does not exist | Refuse. Print the path that was checked, suggest the developer fix the typo or omit the flag. Do not proceed without the rubric. |
-| `.claude/briefs/{slug}.md` already exists | Refuse to overwrite silently. Offer three paths: overwrite (require explicit `yes`), pick a different slug, amend in-place. |
-| Developer cannot produce any acceptance criteria | After one push-back attempt, refuse to write the brief. Tell the developer: "Spark needs at least one observable criterion. Come back when you have one — or run `/shape-brief` in the production factory if you want help thinking through it." |
-| Developer asks spark to invent a field for them | Refuse. Spark interviews; it does not fabricate. If the developer doesn't know the answer, that's a signal the idea isn't ready for a hackathon-speed build — surface and stop. |
+|---|---|
+| `--rubric <path>` missing on disk | Print the path checked; do not proceed without the rubric. |
+| `.claude/briefs/{slug}.md` exists | Offer overwrite (`yes`) / new slug / amend. |
+| No acceptance criterion after one push-back | *"Spark needs at least one observable criterion."* Stop. |
+| Developer asks spark to invent a field | Refuse — spark captures, it does not fabricate. |
 
----
-
-## What this skill does NOT do
-
-- Does **not** stress-test the idea. Hackathon mode trusts the developer.
-- Does **not** elicit boundaries, affected repos, risk, constraints from upstream, or data reality decisions. Those fields are required by the production factory's `BRIEF-INPUT-SCHEMA.md` but are elicited by `/elevate-to-brief` when (and only when) the demo is being promoted to a production brief.
-- Does **not** invoke the production factory. `/spark` writes a hackathon-shaped brief; `/elevate-to-brief` is what bridges the two factories.
-- Does **not** write metrics, plans, or audit trail. The prototype factory has no plans-to-disk audit by design (see `.claude/plans/README.md`).
-- Does **not** read or apply the rubric's bias logic. Step 4 captures the rubric verbatim; biasing is `rubric-bias-logic`'s concern (a sibling slice that lights up rubric-aware behaviour in `/spark` and `/sprint` once present).
-- Does **not** validate the runtime stack against what slice 4 (`cvl-dna-and-local-defaults`) has scaffolded. Spark accepts `cli` or `other` even when only `web` scaffolds exist — the developer is on their own for non-default stacks until those scaffolds land.
-
----
-
-## Common failure modes
-
-- **Drifting into `/shape-brief` ceremony.** If you find yourself asking the developer to stress-test their outcome, you're in the wrong skill. Stop and re-read the discipline note above. Spark is deliberately fork-not-clone of shape-brief.
-- **Five-field creep.** "What about ___?" is a common temptation. Refuse. Anything beyond the five fields belongs in `/elevate-to-brief`.
-- **Skipping step reflection in `--quick` mode.** Just because the user wants speed doesn't mean accuracy is optional. Reflect the captured idea back in one line before writing the file, even in quick mode. One sentence — not five.
-- **Silent fallback on missing rubric.** If `--rubric <path>` doesn't exist on disk and you proceed as if no rubric was supplied, you've violated Rule 4. Always refuse explicitly.
-- **Inventing acceptance criteria.** If the developer can't articulate one, refuse — don't infer "what they probably meant".
-- **Writing to a slug that collides** without surfacing the collision. The refusal is part of the contract — silently writing to a new slug or appending to the existing brief breaks the developer's mental model.
-
----
-
-## Spark Brief Format — quick reference
-
-See sibling file `SPARK-BRIEF-FORMAT.md` for the authoritative spec. The five required fields, in writing order:
-
-1. **Outcome** — paragraph(s)
-2. **Acceptance criteria** — bulleted list
-3. **Runtime stack** — `web` / `cli` / `other`
-4. **Rubric** — paste-in / file content / `(none)`
-5. **Notes** — free-form / `(none)`
-
-A YAML-front-matter version may land in v0.2 if downstream parsers want it; v0.1 is plain markdown sections.
-
----
-
-## Hand-off
-
-After writing the brief, tell the developer:
-
-> "Brief written to `.claude/briefs/{slug}.md`. Run `/sprint` to start building."
-
-If the rubric was supplied: add one line:
-
-> "Rubric captured — `/sprint` and (eventually) `/elevate-to-brief` will respect it."
-
-That's it. No `/plan-slice` recommendation, no slicing strategy, no architecture review. Spark is one step; the next step is sprint.
+## Scope
+- Captures exactly six fields. Promotion fields (boundaries, repos, risk, constraints, data) belong to `/elevate-to-brief`.
+- Captures the rubric verbatim; does not apply rubric bias (that is `rubric-bias-logic`).
+- Accepts `cli` / `other` even when only `web` templates exist; the developer owns non-default stacks.
+- The research swarm shapes the brief only — it surfaces findings for the developer to accept, and never gates, scores, or adds a section.
+- Writes only the brief — no metrics, plans, or audit trail.

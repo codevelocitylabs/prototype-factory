@@ -1,5 +1,4 @@
 {
-  "outputStyle": "Explanatory",
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD": "1"
@@ -56,5 +55,9 @@
         ]
       }
     ]
+  },
+  "outputStyle": "Explanatory",
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
   }
 }

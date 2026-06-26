@@ -1,6 +1,6 @@
 # Spark Brief Format — the contract `/spark` writes and downstream skills read
 
-**Format version:** 1
+**Format version:** 2
 **Producer:** `/spark` (this skill)
 **Consumers:** `/sprint`, `/elevate-to-brief`, `rubric-bias-logic`
 
@@ -10,15 +10,16 @@ This document is the authoritative spec for what a `/spark`-produced brief looks
 
 ## Field set
 
-A Spark Brief contains exactly **five required sections**, in this order:
+A Spark Brief contains **six sections**, in this order:
 
 1. `## Outcome`
 2. `## Acceptance criteria`
 3. `## Runtime stack`
-4. `## Rubric`
-5. `## Notes`
+4. `## Visual direction`
+5. `## Rubric`
+6. `## Notes`
 
-Sections are markdown second-level headings (`## `). No nesting. No optional sections. No additional sections in v1 — if `/spark` wants to capture more, that lands in v2 with a format-version bump.
+Sections are markdown second-level headings (`## `). No nesting. `## Outcome`, `## Acceptance criteria`, and `## Runtime stack` carry real content; `## Visual direction`, `## Rubric`, and `## Notes` may be the literal `(none)`. Further fields land in a future version via a format-version bump.
 
 Above the sections, the file carries a level-1 heading with the idea title and one metadata line:
 
@@ -26,7 +27,7 @@ Above the sections, the file carries a level-1 heading with the idea title and o
 # {Idea title}
 
 **Prototype factory brief — produced by /spark on {ISO 8601 timestamp}**
-**Spark format version:** 1
+**Spark format version:** 2
 ```
 
 The metadata line lets downstream parsers fail fast on version drift.
@@ -68,7 +69,18 @@ One of: `web` (default), `cli`, `other`. If `other`, a free-text description fol
 >
 > other: macOS menu-bar app
 
-### 4. Rubric (required field; the *content* may be `(none)`)
+### 4. Visual direction (optional; the *content* may be `(none)`)
+
+A free-text look-and-feel cue for `/sprint`: whose visual world the demo should echo (the audience's domain, a brand, a reference site). Web demos typically fill it; `cli`/`other` and "no opinion" use `(none)`. When `(none)`, `/sprint` infers direction from `## Outcome`'s audience.
+
+**Validation:** non-empty (either a cue or the literal `(none)`).
+
+**Examples:**
+> Feel like a boutique third-wave coffee roaster's site — warm, editorial, generous whitespace.
+>
+> (none)
+
+### 5. Rubric (required field; the *content* may be `(none)`)
 
 If the developer supplied a rubric: paste-in markdown, file content, or `[see rubric.md]` reference. Verbatim — `/spark` does not summarise the rubric.
 
@@ -81,13 +93,13 @@ If no rubric: the literal string `(none)`.
 Rubric supplied:
 > ## Judging criteria
 > 1. Demo quality (40%) — does it actually work, end-to-end?
-> 2. CVL DNA (30%) — does it look and feel like a Code Velocity Labs prototype?
+> 2. Visual fit (30%) — does it look like it belongs in the audience's world?
 > 3. Business value (30%) — would a real CS team want this on Monday?
 
 No rubric:
 > (none)
 
-### 5. Notes (required field; the *content* may be `(none)`)
+### 6. Notes (required field; the *content* may be `(none)`)
 
 Free-form. Anything the developer wants captured — prior art references, what-not-to-build, links to inspiration, ad-hoc scratchpad.
 
@@ -105,19 +117,21 @@ Briefs are written to `.claude/briefs/{slug}.md` where `{slug}` is a kebab-case 
 
 ## Versioning
 
-The `**Spark format version:** 1` metadata line is the canary. Consumers (`/sprint`, `/elevate-to-brief`, `rubric-bias-logic`) check this line and refuse to read briefs they don't understand.
+The `**Spark format version:** N` metadata line is the canary. Consumers (`/sprint`, `/elevate-to-brief`, `rubric-bias-logic`) support version **≤ 2** and refuse briefs newer than they understand.
+
+**v2 (current)** added the optional `## Visual direction` section. It is **additive and backward-compatible**: a v1 brief (no `## Visual direction`) stays valid — consumers treat the absent section as `(none)`. No migration of existing briefs is required.
 
 Format extensions are **additive only**:
 
-- v2 may add optional sections (e.g. `## Audience size`, `## Time budget`) — but must NOT remove or rename v1 sections.
-- v2 may add new field values for existing fields (e.g. `mobile` to runtime stack) — but must NOT remove `web`, `cli`, `other`.
-- Breaking changes (renaming a section, removing a field) require a format-version bump and a coordinated update across all consumers.
+- A new version may add optional sections — but must NOT remove or rename existing ones.
+- A new version may add field values (e.g. `mobile` to runtime stack) — but must NOT remove `web`, `cli`, `other`.
+- Removing or renaming a section requires a version bump and a coordinated update across all consumers.
 
 ---
 
 ## Comparison: Spark Brief Format vs `BRIEF-INPUT-SCHEMA.md`
 
-The production factory's `BRIEF-INPUT-SCHEMA.md` (in `production-factory (private)/.claude/skills/shape-brief/`) requires seven fields. Spark requires five. The gap maps as follows:
+The production factory's `BRIEF-INPUT-SCHEMA.md` (in `production-factory (private)/.claude/skills/shape-brief/`) requires seven fields. Spark requires six. The gap maps as follows:
 
 | Production `BRIEF-INPUT-SCHEMA.md` field | Spark Brief Format | Bridging behaviour at `/elevate-to-brief` |
 |------------------------------------------|---------------------|--------------------------------------------|
@@ -137,6 +151,7 @@ The production factory's `BRIEF-INPUT-SCHEMA.md` (in `production-factory (privat
 | Spark Brief Format field | Production-side handling |
 |---------------------------|---------------------------|
 | `## Runtime stack` | Not in production schema (production briefs describe a *change* to existing repos, not a *new* demo stack). `/elevate-to-brief` translates the stack pick into an "Affected product repos" answer (e.g. `web` → "a new MFE repo to be created" or "an existing MFE repo to be extended"). |
+| `## Visual direction` | No production-schema field. `/elevate-to-brief` carries it into the elevated brief's refinement notes — it informed the demo's look; it does not gate promotion. |
 
 The asymmetry is intentional. Spark optimises for **speed of capture**; the production schema optimises for **gate-checkable completeness**. The two formats meet at `/elevate-to-brief`, where the developer is asked to fill the gap deliberately.
 
@@ -146,10 +161,10 @@ The asymmetry is intentional. Spark optimises for **speed of capture**; the prod
 
 When `/elevate-to-brief` reads a Spark Brief, the parsing algorithm is:
 
-1. Check `**Spark format version:** N` — refuse if N is greater than the consumer's supported version.
+1. Check `**Spark format version:** N` — refuse if N > 2 (the supported version). A v1 brief is valid: treat a missing `## Visual direction` as `(none)`.
 2. Extract the level-1 heading as the idea title.
-3. For each of the five required sections, extract the content between the `## {section}` heading and the next `## ` heading (or EOF).
-4. Validate the five sections are non-empty (the `(none)` literal counts as non-empty for Rubric and Notes).
-5. If any required section is missing or empty, refuse and surface — do not improvise.
+3. For each section, extract the content between the `## {section}` heading and the next `## ` heading (or EOF).
+4. Validate that `## Outcome`, `## Acceptance criteria`, and `## Runtime stack` are non-empty. `## Visual direction`, `## Rubric`, and `## Notes` may be the literal `(none)`.
+5. If a required section is missing or empty, refuse and surface — do not improvise.
 
 This algorithm is also what `/sprint` and `rubric-bias-logic` use when consuming a Spark Brief.
