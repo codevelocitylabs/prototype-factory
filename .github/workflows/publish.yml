@@ -1,0 +1,35 @@
+name: Publish to npm
+
+# Publishes @codevelocitylabs/prototype-factory to the public npm registry
+# whenever a GitHub Release is published. Requires repo secret NPM_TOKEN
+# (an npm "Automation" access token with publish rights on the
+# @codevelocitylabs org). Bump the version in package.json before each
+# release — npm rejects republishing an existing version.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Run tests
+        run: bash tests/run-all.sh
+
+      - name: Publish (public)
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # Optional supply-chain provenance for a public package:
+        #   add `id-token: write` under permissions and append `--provenance`.
