@@ -1,16 +1,23 @@
 name: Publish to npm
 
-# Publishes @codevelocitylabs/prototype-factory to the public npm registry
-# whenever a GitHub Release is published. Requires repo secret NPM_TOKEN
-# (an npm "Automation" access token with publish rights on the
-# @codevelocitylabs org). Bump the version in package.json before each
-# release — npm rejects republishing an existing version.
+# Publishes @codevelocitylabs/prototype-factory to the public npm registry on
+# each GitHub Release, via npm Trusted Publishing (OIDC) — no NPM_TOKEN, no 2FA
+# bypass. Provenance is generated automatically.
+#
+# One-time setup on npmjs.com (package -> Settings -> Trusted publishing):
+#   Org/user: codevelocitylabs | Repo: prototype-factory
+#   Workflow filename: publish.yml | Allowed action: npm publish
+# The package must already exist on npm, so do the FIRST publish manually:
+#   npm login && npm publish --access public   (enter your 2FA OTP)
+#
+# Bump the version in package.json before each release.
 
 on:
   release:
     types: [published]
 
 permissions:
+  id-token: write   # mint the OIDC token npm verifies (trusted publishing)
   contents: read
 
 jobs:
@@ -24,12 +31,11 @@ jobs:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Upgrade npm (trusted publishing requires npm >= 11.5.1)
+        run: npm install -g npm@latest
+
       - name: Run tests
         run: bash tests/run-all.sh
 
-      - name: Publish (public)
+      - name: Publish (public, OIDC trusted publishing)
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        # Optional supply-chain provenance for a public package:
-        #   add `id-token: write` under permissions and append `--provenance`.
