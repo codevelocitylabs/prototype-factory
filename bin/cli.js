@@ -95,6 +95,26 @@ const WORKING_DIRS = [".claude/plans", ".claude/metrics", ".claude/briefs"];
 const TOP_LEVEL_DIRS = ["templates", "docs"];
 
 // ----------------------------------------------------------------------------
+// White-label — produce a stamped artifact with ZERO Code Velocity trace
+// ----------------------------------------------------------------------------
+// Branding that the normal pack intentionally ships (the leadgen CTA) lives in
+// source files inside `<!-- WL-STRIP-START -->…<!-- WL-STRIP-END -->` regions.
+// A white-label stamp deletes those regions on copy; everything that isn't the
+// feature was already removed from the base pack. After stamping we GREP the
+// result and refuse the install on any surviving trace — "no trace" is enforced,
+// not promised, and the gate self-polices future un-wrapped additions.
+const WL_STRIP_RE = /<!-- WL-STRIP-START -->[\s\S]*?<!-- WL-STRIP-END -->/g;
+const BRANDING_RE =
+  /code ?velocity|codevelocitylabs|codevelocity\.io|cvl[-_]|\bCVL\b/i;
+const WL_TEXT_EXTENSIONS = new Set([
+  ".md", ".js", ".mjs", ".cjs", ".json", ".html", ".css", ".sh", ".txt",
+  ".yml", ".yaml",
+]);
+// docs/ is pervasively CVL-branded (capability-model.md is entirely about it);
+// under white-label it is omitted wholesale rather than scrubbed line-by-line.
+const WL_OMITTED_TOP_LEVEL = new Set(["docs"]);
+
+// ----------------------------------------------------------------------------
 // Version (cached — package.json read at most once per process)
 // ----------------------------------------------------------------------------
 
@@ -114,16 +134,31 @@ function getVersion() {
 // Filesystem helpers
 // ----------------------------------------------------------------------------
 
-function copyDirSync(src, dest) {
+function copyDirSync(src, dest, opts = {}) {
   fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
     if (entry.isDirectory()) {
-      copyDirSync(srcPath, destPath);
+      copyDirSync(srcPath, destPath, opts);
     } else {
-      fs.copyFileSync(srcPath, destPath);
+      copyFileMaybeScrub(srcPath, destPath, opts);
     }
+  }
+}
+
+// Copy one file. In white-label mode (opts.whiteLabel), text files are routed
+// through the branding scrub — every WL-STRIP region is deleted — and everything
+// else is a verbatim byte copy. Without the flag this is a plain copyFileSync,
+// so the normal stamp is byte-identical to before.
+function copyFileMaybeScrub(srcPath, destPath, opts = {}) {
+  if (opts.whiteLabel && WL_TEXT_EXTENSIONS.has(path.extname(srcPath))) {
+    const scrubbed = fs
+      .readFileSync(srcPath, "utf8")
+      .replace(WL_STRIP_RE, "");
+    fs.writeFileSync(destPath, scrubbed);
+  } else {
+    fs.copyFileSync(srcPath, destPath);
   }
 }
 
@@ -146,6 +181,65 @@ function existsInTarget(relativePath) {
   return fs.existsSync(path.join(TARGET_DIR, relativePath));
 }
 
+function walkFiles(dir) {
+  const out = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...walkFiles(p));
+    else out.push(p);
+  }
+  return out;
+}
+
+// White-label gate: scan only the paths the pack itself just wrote (so an
+// in-place `--here` stamp never false-positives on the user's own files) for any
+// surviving Code Velocity reference. Returns the first offender {file,line,text}
+// or null when the artifact is clean.
+function findBrandingTrace(rootDir) {
+  const scopes = [...FACTORY_DIRS, ...FACTORY_FILES, ...TOP_LEVEL_DIRS];
+  for (const rel of scopes) {
+    const full = path.join(rootDir, rel);
+    if (!fs.existsSync(full)) continue;
+    const files = fs.statSync(full).isDirectory() ? walkFiles(full) : [full];
+    for (const file of files) {
+      if (!WL_TEXT_EXTENSIONS.has(path.extname(file))) continue;
+      const lines = fs.readFileSync(file, "utf8").split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        if (BRANDING_RE.test(lines[i])) {
+          return {
+            file: path.relative(rootDir, file),
+            line: i + 1,
+            text: lines[i].trim(),
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// Fail an incomplete white-label scrub loudly. `cleanupDir` is removed first when
+// supplied (a freshly-created greenfield workspace we own); for in-place `--here`
+// we must NOT delete the user's repo, so we only surface recovery instructions.
+function assertWhiteLabelClean(stampRoot, { cleanupDir = null } = {}) {
+  const trace = findBrandingTrace(stampRoot);
+  if (!trace) return;
+  if (cleanupDir) fs.rmSync(cleanupDir, { recursive: true, force: true });
+  console.error(
+    `\nwhite-label scrub incomplete: Code Velocity trace survived at ${trace.file}:${trace.line}`
+  );
+  console.error(`  > ${trace.text}`);
+  console.error(
+    `recovery: in the pack source, wrap that text in <!-- WL-STRIP-START -->…<!-- WL-STRIP-END --> (or remove it), then re-run.`
+  );
+  if (!cleanupDir) {
+    console.error(
+      `note: files were already stamped here; discard them with \`git checkout -- .\` / \`git clean -fd\` before retrying.`
+    );
+  }
+  process.exit(1);
+}
+
 // ----------------------------------------------------------------------------
 // Pure validation
 // ----------------------------------------------------------------------------
@@ -166,16 +260,22 @@ function validateInitName(name) {
   return null;
 }
 
-function plannedInitSteps(workspaceName) {
+function plannedInitSteps(workspaceName, whiteLabel = false) {
+  const topLevels = whiteLabel
+    ? TOP_LEVEL_DIRS.filter((d) => !WL_OMITTED_TOP_LEVEL.has(d))
+    : TOP_LEVEL_DIRS;
   return [
     `validate name "${workspaceName.replace(/^cvl-/, "")}" against [A-Za-z0-9._-]+ and canonical-collision rule`,
-    `create directory ./${workspaceName}/`,
-    `copy factory dirs: ${FACTORY_DIRS.join(", ")}`,
+    `create directory ./${workspaceName}/${whiteLabel ? "  (white-label — no cvl- prefix)" : ""}`,
+    `copy factory dirs: ${FACTORY_DIRS.join(", ")}${whiteLabel ? "  (branding scrubbed)" : ""}`,
     `copy factory files: ${FACTORY_FILES.join(", ")}`,
-    `copy top-level dirs (if present): ${TOP_LEVEL_DIRS.join(", ")}`,
+    `copy top-level dirs (if present): ${topLevels.join(", ")}`,
     `create working dirs with .gitkeep: ${WORKING_DIRS.join(", ")}`,
     `write .claude/.factory-version (${getVersion()})`,
     `write .gitignore (SPAWNED_GITIGNORE)`,
+    ...(whiteLabel
+      ? [`white-label gate: grep stamped tree; refuse install on any Code Velocity trace`]
+      : []),
     `git init -b main in ./${workspaceName}/`,
     `git add -A && git commit (initial v${getVersion()} stamp)`,
     `(deferred — not run by init) gh repo create / branch protection / git push — happen at developer's discretion`,
@@ -244,24 +344,25 @@ function preserveUserFiles() {
   return preserved;
 }
 
-function installFactoryFiles(targetDir) {
+function installFactoryFiles(targetDir, opts = {}) {
   for (const dir of FACTORY_DIRS) {
     const src = path.join(PACKAGE_ROOT, dir);
     const dest = path.join(targetDir, dir);
-    if (fs.existsSync(src)) copyDirSync(src, dest);
+    if (fs.existsSync(src)) copyDirSync(src, dest, opts);
   }
   for (const file of FACTORY_FILES) {
     const src = path.join(PACKAGE_ROOT, file);
     const dest = path.join(targetDir, file);
     if (fs.existsSync(src)) {
       fs.mkdirSync(path.dirname(dest), { recursive: true });
-      fs.copyFileSync(src, dest);
+      copyFileMaybeScrub(src, dest, opts);
     }
   }
   for (const topLevel of TOP_LEVEL_DIRS) {
+    if (opts.whiteLabel && WL_OMITTED_TOP_LEVEL.has(topLevel)) continue;
     const src = path.join(PACKAGE_ROOT, topLevel);
     if (fs.existsSync(src)) {
-      copyDirSync(src, path.join(targetDir, topLevel));
+      copyDirSync(src, path.join(targetDir, topLevel), opts);
     }
   }
 }
@@ -284,6 +385,30 @@ function writeVersionMarker(targetDir) {
   );
 }
 
+// Merge-safe .gitignore for in-place installs. Absent → write SPAWNED_GITIGNORE
+// wholesale. Present → append only the pattern lines (skipping comments and
+// anything already ignored) under a labelled block, never clobbering the user's
+// own file. Returns a small summary for the handoff message.
+function writeGitignoreMerged(targetDir) {
+  const gitignorePath = path.join(targetDir, ".gitignore");
+  if (!fs.existsSync(gitignorePath)) {
+    fs.writeFileSync(gitignorePath, SPAWNED_GITIGNORE);
+    return { created: true, appended: 0 };
+  }
+  const existing = fs.readFileSync(gitignorePath, "utf8");
+  const have = new Set(existing.split("\n").map((l) => l.trim()));
+  const toAppend = SPAWNED_GITIGNORE.split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#") && !have.has(l));
+  if (toAppend.length === 0) return { created: false, appended: 0 };
+  const sep = existing.endsWith("\n") ? "" : "\n";
+  fs.writeFileSync(
+    gitignorePath,
+    `${existing}${sep}\n# --- added by prototype-factory ---\n${toAppend.join("\n")}\n`
+  );
+  return { created: false, appended: toAppend.length };
+}
+
 function restoreUserFiles(preserved) {
   for (const [relativePath, tmpPath] of preserved) {
     const destPath = path.join(TARGET_DIR, relativePath);
@@ -300,9 +425,9 @@ function restoreUserFiles(preserved) {
 // init <name> — local-only stamp (no GitHub interaction; deferred-push by design)
 // ----------------------------------------------------------------------------
 
-function stampInitWorkspace(workspacePath) {
+function stampInitWorkspace(workspacePath, opts = {}) {
   fs.mkdirSync(workspacePath, { recursive: false });
-  installFactoryFiles(workspacePath);
+  installFactoryFiles(workspacePath, opts);
   ensureWorkingDirs(workspacePath);
   writeVersionMarker(workspacePath);
   fs.writeFileSync(path.join(workspacePath, ".gitignore"), SPAWNED_GITIGNORE);
@@ -317,15 +442,16 @@ function initialGitCommit(workspacePath) {
   );
 }
 
-function printInitHandoff(workspaceName) {
+function printInitHandoff(workspaceName, whiteLabel = false) {
+  const repoOwner = whiteLabel ? "<owner>" : CVL_ORG;
   console.log(`
 ============================================================
-  Workspace stamped at ./${workspaceName}/
+  Workspace stamped at ./${workspaceName}/${whiteLabel ? "  (white-label)" : ""}
   Local-only — no GitHub repo created, no push.
 
   When you decide the demo is worth keeping for real:
     cd ${workspaceName}
-    gh repo create ${CVL_ORG}/${workspaceName} --private --source . --push
+    gh repo create ${repoOwner}/${workspaceName} --private --source . --push
 
   Or hand it off to the production factory via /elevate-to-brief.
 
@@ -337,14 +463,14 @@ function printInitHandoff(workspaceName) {
 }
 
 async function runInit(name, options = {}) {
-  const { dryRun = false } = options;
+  const { dryRun = false, whiteLabel = false } = options;
   const validationError = validateInitName(name);
   if (validationError) {
     console.error(`error: ${validationError}`);
     process.exit(1);
   }
 
-  const workspaceName = `cvl-${name}`;
+  const workspaceName = whiteLabel ? name : `cvl-${name}`;
   const workspacePath = path.join(TARGET_DIR, workspaceName);
 
   if (fs.existsSync(workspacePath)) {
@@ -358,12 +484,14 @@ async function runInit(name, options = {}) {
   }
 
   console.log(
-    `\nClaude Code Prototype Factory ${getVersion()} — init ${workspaceName}\n`
+    `\nClaude Code Prototype Factory ${getVersion()} — init ${workspaceName}${
+      whiteLabel ? " (white-label)" : ""
+    }\n`
   );
 
   if (dryRun) {
     console.log("Dry-run: planned actions (none executed):");
-    for (const step of plannedInitSteps(workspaceName)) {
+    for (const step of plannedInitSteps(workspaceName, whiteLabel)) {
       console.log(`  - ${step}`);
     }
     console.log("\nNo files written. No external calls made. Exiting.\n");
@@ -372,7 +500,7 @@ async function runInit(name, options = {}) {
 
   try {
     console.log(`Stamping workspace at ./${workspaceName}/ ...`);
-    stampInitWorkspace(workspacePath);
+    stampInitWorkspace(workspacePath, { whiteLabel });
   } catch (err) {
     console.error(`workspace stamping failed:`);
     console.error(err.stack || err.message);
@@ -380,6 +508,12 @@ async function runInit(name, options = {}) {
       `recovery: partial workspace at ./${workspaceName}/ (delete manually); then re-run init`
     );
     process.exit(1);
+  }
+
+  // White-label gate — before any commit. A surviving trace removes the
+  // freshly-created workspace and aborts (we own this dir, so deletion is safe).
+  if (whiteLabel) {
+    assertWhiteLabelClean(workspacePath, { cleanupDir: workspacePath });
   }
 
   try {
@@ -394,15 +528,110 @@ async function runInit(name, options = {}) {
     process.exit(1);
   }
 
-  printInitHandoff(workspaceName);
+  printInitHandoff(workspaceName, whiteLabel);
+}
+
+// ----------------------------------------------------------------------------
+// init --here — stamp in place into an existing (typically blank) repo
+// ----------------------------------------------------------------------------
+
+function plannedInitHereSteps(whiteLabel = false) {
+  const topLevels = whiteLabel
+    ? TOP_LEVEL_DIRS.filter((d) => !WL_OMITTED_TOP_LEVEL.has(d))
+    : TOP_LEVEL_DIRS;
+  return [
+    `stamp into the CURRENT directory (no subdirectory, no cvl- prefix)`,
+    `copy factory dirs: ${FACTORY_DIRS.join(", ")}${whiteLabel ? "  (branding scrubbed)" : ""}`,
+    `copy factory files: ${FACTORY_FILES.join(", ")}`,
+    `copy top-level dirs (if present): ${topLevels.join(", ")}`,
+    `create working dirs with .gitkeep: ${WORKING_DIRS.join(", ")}`,
+    `write .claude/.factory-version (${getVersion()})`,
+    `write/merge .gitignore (append missing SPAWNED_GITIGNORE patterns; never clobber an existing one)`,
+    ...(whiteLabel
+      ? [`white-label gate: grep stamped tree; refuse install on any Code Velocity trace`]
+      : []),
+    `(not run) git init / git commit — the existing repo and its first commit stay yours`,
+  ];
+}
+
+function printInitHereHandoff(whiteLabel, gitignore) {
+  const inGitRepo = fs.existsSync(path.join(TARGET_DIR, ".git"));
+  const ignoreNote = gitignore.created
+    ? "wrote .gitignore"
+    : gitignore.appended > 0
+      ? `merged ${gitignore.appended} pattern(s) into your existing .gitignore`
+      : "existing .gitignore already covered the pack patterns";
+  console.log(`
+============================================================
+  Pack stamped into the current directory${whiteLabel ? "  (white-label)" : ""}.
+  ${ignoreNote}.
+  ${
+    inGitRepo
+      ? "Existing git repo detected — no git init, no commit made."
+      : "Not a git repo — run `git init` if you want version history."
+  }
+
+  Review, then make the first commit yourself:
+    git add -A
+    git commit -m "Add prototype factory pack"
+
+  Next:
+    claude /spark
+============================================================
+`);
+}
+
+async function runInitHere(options = {}) {
+  const { dryRun = false, whiteLabel = false } = options;
+
+  console.log(
+    `\nClaude Code Prototype Factory ${getVersion()} — init --here (in place)${
+      whiteLabel ? " (white-label)" : ""
+    }\n`
+  );
+
+  if (dryRun) {
+    console.log("Dry-run: planned actions (none executed):");
+    for (const step of plannedInitHereSteps(whiteLabel)) {
+      console.log(`  - ${step}`);
+    }
+    console.log("\nNo files written. No external calls made. Exiting.\n");
+    return;
+  }
+
+  // Re-stamp guard: if a pack is already installed here, confirm before
+  // overwriting and preserve the user's working files across the copy.
+  let preserved = new Map();
+  if (existsInTarget(".claude")) {
+    const confirmed = await confirmOverwrite();
+    if (!confirmed) {
+      console.log("Aborted.");
+      process.exit(0);
+    }
+    preserved = preserveUserFiles();
+  }
+
+  console.log("Stamping into the current directory ...");
+  installFactoryFiles(TARGET_DIR, { whiteLabel });
+  ensureWorkingDirs(TARGET_DIR);
+  writeVersionMarker(TARGET_DIR);
+  if (preserved.size) restoreUserFiles(preserved);
+  const gitignore = writeGitignoreMerged(TARGET_DIR);
+
+  // In-place: a dirty scrub must NOT delete the user's repo — surface and abort.
+  if (whiteLabel) assertWhiteLabelClean(TARGET_DIR);
+
+  printInitHereHandoff(whiteLabel, gitignore);
 }
 
 // ----------------------------------------------------------------------------
 // Default invocation (force-stamp into current dir)
 // ----------------------------------------------------------------------------
 
-async function runForceStamp({ force = false } = {}) {
-  console.log(`\nClaude Code Prototype Factory ${getVersion()}\n`);
+async function runForceStamp({ force = false, whiteLabel = false } = {}) {
+  console.log(
+    `\nClaude Code Prototype Factory ${getVersion()}${whiteLabel ? " (white-label)" : ""}\n`
+  );
 
   if (existsInTarget(".claude") && !force) {
     const confirmed = await confirmOverwrite();
@@ -414,10 +643,13 @@ async function runForceStamp({ force = false } = {}) {
 
   const preserved = preserveUserFiles();
   console.log("Installing factory files...");
-  installFactoryFiles(TARGET_DIR);
+  installFactoryFiles(TARGET_DIR, { whiteLabel });
   ensureWorkingDirs(TARGET_DIR);
   writeVersionMarker(TARGET_DIR);
   restoreUserFiles(preserved);
+
+  // In-place: a dirty scrub must NOT delete the user's directory — surface + abort.
+  if (whiteLabel) assertWhiteLabelClean(TARGET_DIR);
 
   console.log(
     `\nClaude Code Prototype Factory ${getVersion()} installed successfully.\n`
@@ -443,15 +675,25 @@ function checkNodeVersion() {
 
 function parseArgs(argv) {
   const args = argv.slice(2);
+  const whiteLabel =
+    args.includes("--white-label") || args.includes("--no-branding");
   if (args[0] === "init") {
     const remaining = args.slice(1);
+    const positional = remaining.find((a) => !a.startsWith("--"));
+    const here = remaining.includes("--here") || positional === ".";
     return {
       command: "init",
-      name: remaining.find((a) => !a.startsWith("--")),
+      name: positional === "." ? undefined : positional,
+      here,
+      whiteLabel,
       dryRun: remaining.includes("--dry-run"),
     };
   }
-  return { command: "force-stamp", force: args.includes("--force") };
+  return {
+    command: "force-stamp",
+    force: args.includes("--force"),
+    whiteLabel,
+  };
 }
 
 async function main() {
@@ -459,9 +701,15 @@ async function main() {
   const opts = parseArgs(process.argv);
 
   if (opts.command === "init") {
-    return runInit(opts.name, { dryRun: opts.dryRun });
+    if (opts.here) {
+      return runInitHere({ dryRun: opts.dryRun, whiteLabel: opts.whiteLabel });
+    }
+    return runInit(opts.name, {
+      dryRun: opts.dryRun,
+      whiteLabel: opts.whiteLabel,
+    });
   }
-  return runForceStamp({ force: opts.force });
+  return runForceStamp({ force: opts.force, whiteLabel: opts.whiteLabel });
 }
 
 if (require.main === module) {
@@ -475,6 +723,7 @@ module.exports = {
   // pure helpers (test surface)
   validateInitName,
   plannedInitSteps,
+  plannedInitHereSteps,
   parseArgs,
   getVersion,
   existsInTarget,
@@ -485,7 +734,16 @@ module.exports = {
   writeVersionMarker,
   restoreUserFiles,
   copyDirSync,
+  copyFileMaybeScrub,
   mergeRestoreDir,
+  writeGitignoreMerged,
+  // white-label (test surface)
+  findBrandingTrace,
+  walkFiles,
+  WL_STRIP_RE,
+  BRANDING_RE,
+  WL_TEXT_EXTENSIONS,
+  WL_OMITTED_TOP_LEVEL,
   // constants
   CVL_ORG,
   CANONICAL_REPO_NAME,

@@ -46,6 +46,10 @@ Then inside Claude Code:
 /elevate-to-brief      # (optional) bridge to the production factory
 ```
 
+**Other install modes** (see `install.md`):
+- `init --here` (or `init .`) — stamp into an existing/blank repo: no `cvl-` subdir, writes a merge-safe `.gitignore`, leaves the first commit to you.
+- `--white-label` (alias `--no-branding`) — produce a workspace with zero Code Velocity references (no demo CTA, no `cvl-` prefix, `docs/` omitted); the stamp is gated to refuse if any trace survives.
+
 ---
 
 ## The chain
@@ -58,7 +62,7 @@ Optional `--rubric <path>` pre-loads a hackathon judging rubric (or business-sta
 
 ### `/sprint` — straight-line build
 
-Reads the spark brief, runs a one-message Plan-Mode-lite preview, copies `templates/<stack>/` wholesale, customises to satisfy the acceptance criteria — web UIs are designed subject-distinctive via `/frontend-design`, with a discreet Code Velocity CTA — boots the dev server, exercises the criteria, hands off. **No slicing, no gates, no hardening swarm** — sprint is the deliberate anti-pattern relative to the production factory's `/build`.
+Reads the spark brief, runs a one-message Plan-Mode-lite preview, copies `templates/<stack>/` wholesale, customises to satisfy the acceptance criteria — web UIs are designed subject-distinctive via `/frontend-design`, with a discreet Code Velocity CTA (suppressed under `--white-label`) — boots the dev server, exercises the criteria, hands off. **No slicing, no gates, no hardening swarm** — sprint is the deliberate anti-pattern relative to the production factory's `/build`.
 
 Novel discipline: a 3-attempt failure threshold on the customisation loop. After three failed re-tries on the same acceptance criterion, sprint stops and surfaces — agentic-safety Rule 7 (honest when caught) applied to build-time.
 

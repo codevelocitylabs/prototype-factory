@@ -32,7 +32,7 @@ Rubric uses `## ` (level-2) headings for each dimension:
 Does it actually work end-to-end?
 
 ## Visual fit
-Does it look like a Code Velocity Labs prototype?
+Does it look like it belongs in the audience's world?
 
 ## Business value
 Would a real team want this on Monday?

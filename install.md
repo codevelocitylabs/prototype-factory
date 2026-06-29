@@ -1,6 +1,6 @@
 # Install — Code Velocity Labs Prototype Factory
 
-Two install paths. Both are non-destructive.
+Three install paths, plus a `--white-label` modifier. All are non-destructive.
 
 ---
 
@@ -42,10 +42,34 @@ Or hand the demo off to the production factory via `/elevate-to-brief` and let t
 
 ---
 
-## Path 2: Force-stamp into an existing directory
+## Path 2: Install into an existing repo (`init --here`)
 
 ```bash
-cd my-existing-thing
+cd my-existing-repo          # e.g. a freshly-created, blank GitHub repo you cloned
+npx @codevelocitylabs/prototype-factory init --here
+```
+
+Use this when you've **already** created the repo (blank, or with just a README/LICENSE) and want the pack stamped into it directly — no `cvl-` subdirectory.
+
+What happens:
+
+1. Stamps the pack into the **current directory** (skills, rules, settings, templates, hooks, docs).
+2. Writes `.gitignore` **merge-safe**: no file → writes the full one; existing file → appends only the patterns you're missing, never clobbering yours.
+3. **Preserves** anything already there (`README.md`, `LICENSE`, …) and your working dirs (`.claude/plans|metrics|briefs`, `CLAUDE.md`) if you're re-stamping.
+4. **Does NOT** run `git init` (the repo already exists) and **does NOT commit** — the first commit stays yours:
+
+   ```bash
+   git add -A && git commit -m "Add prototype factory pack"
+   ```
+
+`init .` is accepted as shorthand for `init --here`.
+
+---
+
+## Path 3: Upgrade / re-stamp in place (`--force`)
+
+```bash
+cd my-stamped-workspace
 npx @codevelocitylabs/prototype-factory --force
 ```
 
@@ -56,7 +80,22 @@ What happens:
 - **Preserved paths** survive untouched: `.claude/plans/`, `.claude/metrics/`, `.claude/briefs/`, `CLAUDE.md`.
 - `.claude/.factory-version` updates to the version you just stamped.
 
-Useful when: upgrading a stamped workspace to a newer pack version, or applying the pack to a directory you initialised by hand.
+Useful when **upgrading** an already-stamped workspace to a newer pack version. For a *fresh* install into an existing repo, prefer `init --here` above — it also sets up `.gitignore`.
+
+---
+
+## White-label (unbranded) installs
+
+Add `--white-label` (alias `--no-branding`) to **any** path to produce a workspace with **zero Code Velocity references** — for handing a demo, or the pack itself, to a third party:
+
+```bash
+npx @codevelocitylabs/prototype-factory init my-demo --white-label
+npx @codevelocitylabs/prototype-factory init --here --white-label
+```
+
+- The stamped pack carries no Code Velocity branding: `/sprint` builds web demos with **no** `codevelocity.io` link/CTA, the `cvl-` workspace prefix is dropped, and the `docs/` methodology folder is omitted.
+- **Verified, not assumed:** after stamping, the CLI greps the result and **refuses** (non-zero exit, naming the offending `file:line`) if any branding survived.
+- Caveat: the install *command* still names the `@codevelocitylabs` package scope. The stamped **workspace** is clean — so if you run `init` yourself and hand over the folder, recipients never see the scope.
 
 ---
 
@@ -65,7 +104,7 @@ Useful when: upgrading a stamped workspace to a newer pack version, or applying 
 | Tool | Version | Required for |
 |------|---------|---------------|
 | Node | 22+ | The pack's CLI uses `node:test` + `node:fs`. Older Node versions are rejected. |
-| Git | 2.40+ | Local `git init` step in `init`; force-stamp doesn't touch git state. |
+| Git | 2.40+ | Local `git init` step in `init <name>`; `init --here` and `--force` don't touch git state. |
 | Claude Code CLI | current | The pack's three skills are invoked as Claude slash-commands. |
 | `gh` CLI authed | optional | Only for the deferred-push step (after `init`). Not required for `init` itself or for `--force`. |
 | `npm login --registry=https://npm.pkg.github.com` | optional | Only for publishing pack updates upstream. Not needed to use the pack. |

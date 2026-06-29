@@ -1,7 +1,7 @@
 {
   "sha256": "138425411943fa249a0f65c0e2c45a8173d72316325b3bddc2c699fbf5a037aa",
   "sha256_scope": "verbatim copy of production factory BRIEF-INPUT-SCHEMA.md (the 4-line vendoring header is excluded from this hash)",
-  "source_repo": "codevelocitylabs/production-factory (private)",
+  "source_repo": "production-factory (private)",
   "source_path": ".claude/skills/shape-brief/BRIEF-INPUT-SCHEMA.md",
   "source_commit": "20562e2",
   "schema_version": 1,
