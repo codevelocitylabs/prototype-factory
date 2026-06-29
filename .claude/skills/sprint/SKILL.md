@@ -1,6 +1,6 @@
 ---
 name: sprint
-description: Build a demo from a Spark Brief. Set a /goal so a fresh-model evaluator gates completion, copy templates/{stack}/, write code to satisfy the brief's acceptance criteria — for web, design subject-distinctive UI via /frontend-design and add a Code Velocity CTA — boot the dev server, and probe each criterion with real evidence. Straight-line: no slicing, no gates.
+description: Build a demo from a Spark Brief: copy templates/{stack}/, write code to satisfy the brief's acceptance criteria — for web, design subject-distinctive UI via /frontend-design — boot the dev server, and probe each criterion with real evidence. Straight-line: no slicing, no gates.
 model: opus
 ---
 
@@ -27,14 +27,8 @@ Search `.claude/briefs/` for files carrying a `**Spark format version:**` line (
 ### 2. Parse the brief
 Apply the algorithm in `SPARK-BRIEF-FORMAT.md` § "Reference implementation note": check the version (refuse if > 2; a v1 brief is valid), extract the title and the six sections. `Outcome` / `Acceptance criteria` / `Runtime stack` must be non-empty; `Visual direction` / `Rubric` / `Notes` may be `(none)` (a v1 brief has no `## Visual direction` → treat as `(none)`). Refuse and name any missing section; do not improvise.
 
-### 3. Set the goal, then preview
-Set the goal first, before building, derived from the acceptance criteria:
-
-> `/goal "every acceptance criterion in .claude/briefs/{slug}.md shows a passing WebFetch/Playwright probe result in the transcript; stop after 6 turns if not all pass"`
-
-A separate evaluator model judges this against the transcript each turn and keeps sprint iterating until the evidence is present; `/goal clear` cancels.
-
-Then print a 4–8 line preview: runtime stack, scaffold source (`templates/{stack}/`), user-code location (`src/demo/` web, `src/main.js` cli, free-form other), how each criterion maps to behaviour, and `--no-boot` state. If `## Rubric` is not `(none)`, append a Rubric-coverage block per `RUBRIC-BIAS.md` (visibility only). End with *"OK to proceed? (y/n)"*; proceed only on `y`/`yes`. This is a one-message preview — do not call `EnterPlanMode`.
+### 3. Preview the plan
+Print a 4–8 line preview: runtime stack, scaffold source (`templates/{stack}/`), user-code location (`src/demo/` web, `src/main.js` cli, free-form other), how each criterion maps to behaviour, and `--no-boot` state. If `## Rubric` is not `(none)`, append a Rubric-coverage block per `RUBRIC-BIAS.md` (visibility only). End with *"OK to proceed? (y/n)"*; proceed only on `y`/`yes`. This is a one-message preview — do not call `EnterPlanMode`.
 
 ### 4. Copy the scaffold
 Copy `templates/{stack}/` into the workspace root, preserving paths. Refuse if the directory is missing (name the stack). Never overwrite existing files — on collision (e.g. `package.json`), ask the developer per file (overwrite / skip / abort).
@@ -43,7 +37,7 @@ Each `templates/{stack}/` ships: `package.json` with `dev`/`build` scripts; the 
 
 ### 5. Customise
 
-**Web stack only — visual surface (skip for `cli`/`other`):** Before writing UI, invoke the `frontend-design:frontend-design` skill (Skill tool) for distinctive-design guidance. Design **subject-distinctive** — on the audience's world, not a templated look. Take direction from `## Visual direction` when it isn't `(none)`, else infer from `## Outcome`'s audience. Author bespoke `public/index.html` + your own CSS (the skeleton ships unstyled). Weave in one lightweight link + a single CTA to `https://codevelocity.io`, styled to fit the design — not a chrome bar; add once, don't duplicate on re-run.
+**Web stack only — visual surface (skip for `cli`/`other`):** Before writing UI, invoke the `frontend-design:frontend-design` skill (Skill tool) for distinctive-design guidance. Design **subject-distinctive** — on the audience's world, not a templated look. Take direction from `## Visual direction` when it isn't `(none)`, else infer from `## Outcome`'s audience. Author bespoke `public/index.html` + your own CSS (the skeleton ships unstyled).<!-- WL-STRIP-START --> Weave in one lightweight link + a single CTA to `https://codevelocity.io`, styled to fit the design — not a chrome bar; add once, don't duplicate on re-run.<!-- WL-STRIP-END -->
 
 Write real code (components, data wiring, UI logic) in the user-code location, aimed at the acceptance criteria — exactly those, nothing adjacent. A criterion you think is missing → record it in the brief's `## Notes`; do not build it.
 
@@ -56,28 +50,27 @@ Otherwise: `npm install` (on failure, refuse with the real error and roll back i
 ### 7. Exercise each criterion
 For each `- ` bullet in `## Acceptance criteria`: WebFetch for rendered-content checks; Playwright MCP for interaction/console checks. Report `pass` / `fail` / `inconclusive` (one-line reason).
 
-Paste the real probe output behind each `pass` — the `/goal` evaluator is read-only and judges only transcript evidence, so claiming an unprobed pass violates Rule 4. Probe the running demo only: do not write test files or wire CI.
+Paste the real probe output behind each `pass` — claiming a pass you didn't probe violates Rule 4. Probe the running demo only: do not write test files or wire CI.
 
-On any `fail`, re-enter Step 5 with that criterion as the target (3-attempt threshold applies). The Step 3 `/goal` keeps sprint iterating until every criterion passes with evidence or the turn-cap fires.
+On any `fail`, re-enter Step 5 with that criterion as the target (3-attempt threshold applies). Keep iterating until every criterion passes with probe evidence, or the threshold stops you.
 
 ### 8. Hand off
 Print:
 
 ```
 Demo running at {url}.
-Acceptance criteria: {n}/{m} passing — verdict by the /goal evaluator, not self-reported.
+Acceptance criteria: {n}/{m} passing — each backed by a probe result above.
   ✓ {criterion 1}
   ✗ {criterion 3} — {failure note}
-(web) Code Velocity CTA: present
 
 Next:
   - Iterate: re-run /sprint
   - Promote: /elevate-to-brief
-  - Make durable: gh repo create codevelocitylabs/<name> --private --source . --push
-  - Stop: ctrl-c the dev server   (/goal clear if the loop is still active)
+  - Make durable: gh repo create <owner>/<name> --private --source . --push
+  - Stop: ctrl-c the dev server
 ```
 
-`m/m` → *"Criteria-complete, confirmed by the `/goal` evaluator — ready for `/elevate-to-brief`."* Otherwise → *"Stopped at {n}/{m} after the 3-attempt threshold or `/goal` turn-cap on {criterion}; re-run `/sprint` to continue."* If `## Rubric` is not `(none)`, append the Rubric-coverage-at-hand-off block per `RUBRIC-BIAS.md`. For web, confirm a `codevelocity.io` link/CTA is present via a substring check on the Step-7 WebFetch — a build requirement, not a scored criterion (kept out of `## Acceptance criteria` and the `/goal` gate).
+`m/m` → *"Criteria-complete — every criterion passed with probe evidence; ready for `/elevate-to-brief`."* Otherwise → *"Stopped at {n}/{m} after the 3-attempt threshold on {criterion}; re-run `/sprint` to continue."* If `## Rubric` is not `(none)`, append the Rubric-coverage-at-hand-off block per `RUBRIC-BIAS.md`.<!-- WL-STRIP-START --> For web, confirm a `codevelocity.io` link/CTA is present via a substring check on the Step-7 WebFetch — a build requirement, not a scored criterion (kept out of `## Acceptance criteria`).<!-- WL-STRIP-END -->
 
 ## Refusals (refuse and surface; never improvise)
 
@@ -96,6 +89,6 @@ Next:
 ## Scope
 - Writes only the demo in the workspace root — no tests, no metrics, no commits, no branch, no push/PR. The developer commits.
 - Rubric is visibility-only (Steps 3 and 8); it does not reorder criteria or score.
-- Verification independence comes from the built-in `/goal` evaluator, not a custom verifier sub-agent.
-- Web visuals are subject-distinctive via `/frontend-design`; leadgen is one Code Velocity link + CTA, not brand chrome. `cli`/`other` have no visual/CTA step.
+- Verification is evidence-backed self-checking: each criterion's `pass` carries its real probe output (Step 7) — no unprobed claims.
+- Web visuals are subject-distinctive via `/frontend-design`.<!-- WL-STRIP-START --> Leadgen is one Code Velocity link + CTA, not brand chrome.<!-- WL-STRIP-END --> `cli`/`other` have no visual/CTA step.
 - Too big for one pass → `/elevate-to-brief`. Sprint does not slice.
